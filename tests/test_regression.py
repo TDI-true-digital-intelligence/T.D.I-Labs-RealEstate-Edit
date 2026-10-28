@@ -119,5 +119,18 @@ c = subprocess.run(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,nohea
 vram_mb = int(c.stdout.strip().splitlines()[0])
 check("bug13 VRAM freed after AI job (< 4000MB idle)", vram_mb < 4000, f"{vram_mb}MB")
 
+
+# 13. review R2: Host-header validation (DNS-rebinding kill)
+import urllib.request as _u2
+try:
+    _u2.urlopen(_u2.Request("http://127.0.0.1:8189/api/presets", headers={"Host": "evil.com"}), timeout=5)
+    badhost = 200
+except Exception as e:
+    badhost = getattr(e, "code", 0)
+check("bug14 bad Host header -> 403", badhost == 403, str(badhost))
+# 14. review R2: /api/ai rejects garbage payloads honestly (image validation before ComfyUI)
+r = post("/api/ai", {"image_b64": "data:image/png;base64,AAAA", "mode": "sky-blue"})
+check("bug15 /api/ai validates image before ComfyUI", "error" in r, str(r)[:100])
+
 print(f"\nFINAL: {len(PASS)} passed, {len(FAIL)} failed")
 sys.exit(1 if FAIL else 0)

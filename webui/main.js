@@ -38,9 +38,13 @@ function createWindow() {
     webPreferences: { contextIsolation: true, nodeIntegration: false },
   })
   win.show(); win.focus()
+  const sameOrigin = (u) => { try { return new URL(u).origin === 'http://127.0.0.1:8189' } catch { return false } }
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http://127.0.0.1:8189')) return { action: 'allow' }
+    if (sameOrigin(url)) return { action: 'allow' }
     shell.openExternal(url); return { action: 'deny' }
+  })
+  win.webContents.on('will-navigate', (e, url) => {
+    if (!sameOrigin(url)) { e.preventDefault(); shell.openExternal(url) }
   })
 
   let healAttempts = 0

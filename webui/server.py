@@ -83,6 +83,10 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 
     def do_GET(self):
+        host = self.headers.get("Host", "")
+        if host not in ("127.0.0.1:8189", "localhost:8189"):
+            return self._send(403, {"error": "bad host"})
+
         p = self.path.split("?")[0]
         if p in ("/", "/index.html"):
             self._send(200, (ROOT / "index.html").read_bytes(), "text/html")
@@ -120,6 +124,10 @@ class H(BaseHTTPRequestHandler):
             return False
 
     def do_POST(self):
+        host = self.headers.get("Host", "")
+        if host not in ("127.0.0.1:8189", "localhost:8189"):
+            return self._send(403, {"error": "bad host"})
+
         p = self.path
         try:
             if p == "/api/grade":
@@ -167,7 +175,18 @@ class H(BaseHTTPRequestHandler):
                 import base64
                 sid = uuid.uuid4().hex[:10]
                 src = UPLOADS / f"re_{sid}.png"
-                src.write_bytes(base64.b64decode(body["image_b64"].split(",")[-1]))
+                # validate + normalize the image BEFORE handing bytes to ComfyUI (bomb/format guard)
+                from PIL import Image as _I
+                import io as _io2
+                _I.MAX_IMAGE_PIXELS = 80_000_000  # hard pixel cap
+                raw = base64.b64decode(body["image_b64"].split(",")[-1])
+                try:
+                    im = _I.open(_io2.BytesIO(raw)); im.load()
+                    if im.width * im.height > 80_000_000:
+                        return self._send(413, {"error": "image too large (80MP max)"})
+                    im.convert("RGB").save(src, "PNG")
+                except Exception as e:
+                    return self._send(415, {"error": f"invalid image: {e}"})
                 prompt_text = body.get("prompt") or AI_MODES.get(body["mode"], AI_MODES["sky-blue"])
                 wf = json.loads((ROOT.parent / "workflows" / "qwen21_turbo_edit_api.json").read_text())
                 wf["4"]["inputs"]["image"] = src.name
