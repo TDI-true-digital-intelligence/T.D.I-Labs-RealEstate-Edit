@@ -2,8 +2,8 @@
 """realestate-edit server — port 8189.
 Two engines: (1) Rust color engine (instant, always on), (2) ComfyUI Qwen-Image-2.1 AI edit (:8188).
 No personal data, no auth by design (localhost only)."""
-import json, os, subprocess, sys, time, urllib.request, uuid
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import json, os, re, subprocess, sys, time, urllib.request, uuid
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -77,7 +77,7 @@ class H(BaseHTTPRequestHandler):
             self._send(200, {"presets": PRESETS, "ai_modes": list(AI_MODES), "comfy_up": self._comfy_up()})
         elif p.startswith("/out/"):
             name = p[5:]
-            if "/" in name or ".." in name:
+            if not re.fullmatch(r"[0-9a-f]{10}-(out|ai)\.png", name):
                 return self._send(400, {"error": "bad path"})
             f = WORK / name
             if f.exists():
@@ -87,7 +87,7 @@ class H(BaseHTTPRequestHandler):
                 self._send(404, {"error": "not found"})
         elif p.startswith("/work/"):
             name = p[6:]
-            if "/" in name or ".." in name:
+            if not re.fullmatch(r"[0-9a-f]{10}-(in|out)\.png", name):
                 return self._send(400, {"error": "bad path"})
             f = WORK / name
             if f.exists():
@@ -188,4 +188,4 @@ class H(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8189
     print(f"realestate-edit server on :{port}")
-    HTTPServer(("127.0.0.1", port), H).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()

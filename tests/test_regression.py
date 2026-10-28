@@ -79,5 +79,31 @@ for dash in ["echo-agent-os", "echo-agent-os-lite"]:
         os.unlink(f.name)
     check(f"bug7 {dash} inline scripts all compile", bad == 0, f"{bad} broken")
 
-print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
+
+# 8. reviewer finding: absolute-path traversal (/out//etc/passwd)
+import urllib.error as _ue
+def _code(u):
+    try:
+        return urllib.request.urlopen("http://127.0.0.1:8189" + u, timeout=5).status
+    except _ue.HTTPError as e:
+        return e.code
+check("bug8 /out//etc/passwd rejected (400/404)", _code("/out//etc/passwd") in (400, 404))
+check("bug9 /out/../../.env rejected", _code("/out/../../home/bitlord/.hermes/.env") in (400, 404))
+# 9. reviewer finding: threading — presets must answer while AI job runs
+import threading
+res = {}
+def slow():
+    try: post("/api/ai", {"image_b64": B64, "mode": "sky-dusk"}, timeout=300)
+    except Exception: pass
+t = threading.Thread(target=slow, daemon=True); t.start()
+import time as _t; _t.sleep(1)
+t0 = _t.time()
+try:
+    urllib.request.urlopen("http://127.0.0.1:8189/api/presets", timeout=5)
+    ok = _t.time() - t0 < 3
+except Exception:
+    ok = False
+check("bug10 presets responsive during AI job (ThreadingHTTPServer)", ok)
+
+print(f"\nFINAL: {len(PASS)} passed, {len(FAIL)} failed")
 sys.exit(1 if FAIL else 0)
