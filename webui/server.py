@@ -195,6 +195,11 @@ class H(BaseHTTPRequestHandler):
                 out = WORK / f"{sid}-ai.png"
                 out.write_bytes((OUTPUTS / fname).read_bytes())
                 _cleanup_work()
+                # free VRAM after the job (Qwen weights ~13GB — FPS is sacred)
+                try:
+                    comfy_post("/free", {"unload_models": True, "free_memory": True})
+                except Exception:
+                    pass
                 self._send(200, {"url": f"/out/{sid}-ai.png", "engine": "qwen-image-2.1-turbo", "prompt": prompt_text})
             else:
                 self._send(404, {"error": "bad path"})

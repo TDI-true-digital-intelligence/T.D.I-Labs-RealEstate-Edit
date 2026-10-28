@@ -113,5 +113,11 @@ check("bug11 comfyui.service enabled at boot", c.stdout.strip() == "enabled", c.
 n = len(list((ROOT / "webui/work").glob("*-*.png")))
 check("bug12 work dir bounded <= 200 files", n <= 200, f"{n} files")
 
+
+# 12. gap-fix: VRAM released after AI job (was 13.7GB resident — FPS-sacred violation)
+c = subprocess.run(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"], capture_output=True, text=True)
+vram_mb = int(c.stdout.strip().splitlines()[0])
+check("bug13 VRAM freed after AI job (< 4000MB idle)", vram_mb < 4000, f"{vram_mb}MB")
+
 print(f"\nFINAL: {len(PASS)} passed, {len(FAIL)} failed")
 sys.exit(1 if FAIL else 0)
