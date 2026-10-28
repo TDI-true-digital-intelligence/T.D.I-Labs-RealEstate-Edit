@@ -61,7 +61,7 @@ async function aiedit() {
   const mode = $('aimode').value;
   $('status').textContent = 'AI editing (qwen-image-2.1, ~30-90s)…';
   try {
-    const body = { image_b64: IMG, mode };
+    const body = { image_b64: IMG, mode, engine: $('aiengine').value };
     if (mode === 'custom') body.prompt = $('aiprompt').value;
     showResult(await post('/api/ai', body));
   } catch (e) { $('status').textContent = '✗ ' + e.message; }

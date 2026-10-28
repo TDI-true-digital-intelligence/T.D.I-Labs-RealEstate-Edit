@@ -45,6 +45,8 @@ def _cleanup_work(max_age_s=3600 * 24, max_files=200):
     except Exception:
         pass
 
+import cloud_engines
+
 def comfy_post(path, payload):
     req = urllib.request.Request(COMFY + path, json.dumps(payload).encode(),
                                  {"Content-Type": "application/json"})
@@ -93,7 +95,7 @@ class H(BaseHTTPRequestHandler):
         elif p == "/app.js":
             self._send(200, (ROOT / "app.js").read_bytes(), "application/javascript")
         elif p == "/api/presets":
-            self._send(200, {"presets": PRESETS, "ai_modes": list(AI_MODES), "comfy_up": self._comfy_up()})
+            self._send(200, {"presets": PRESETS, "ai_modes": list(AI_MODES), "comfy_up": self._comfy_up(), "cloud_profiles": cloud_engines.PROFILES})
         elif p.startswith("/out/"):
             name = p[5:]
             if not re.fullmatch(r"[0-9a-f]{10}-(out|ai)\.png", name):
@@ -170,8 +172,6 @@ class H(BaseHTTPRequestHandler):
                 if cl > 60 * 1024 * 1024:
                     return self._send(413, {"error": "payload too large (max 60MB)"})
                 body = json.loads(self.rfile.read(cl))
-                if not self._comfy_up():
-                    return self._send(503, {"error": "ComfyUI not running on :8188"})
                 import base64
                 sid = uuid.uuid4().hex[:10]
                 src = UPLOADS / f"re_{sid}.png"
@@ -188,6 +188,16 @@ class H(BaseHTTPRequestHandler):
                 except Exception as e:
                     return self._send(415, {"error": f"invalid image: {e}"})
                 prompt_text = body.get("prompt") or AI_MODES.get(body["mode"], AI_MODES["sky-blue"])
+                engine = body.get("engine", "auto")
+                if engine.startswith("cloud:") or (engine == "auto" and not self._comfy_up()):
+                    prof = engine.split(":", 1)[1] if ":" in engine else "glm-cloud"
+                    fn, key = cloud_engines.get_engine(prof)
+                    prompt_text = body.get("prompt") or AI_MODES.get(body["mode"], AI_MODES["sky-blue"])
+                    # re-encode the validated image we already saved at src
+                    out = WORK / f"{sid}-ai.png"
+                    out.write_bytes(fn(key, src.read_bytes(), prompt_text))
+                    _cleanup_work()
+                    return self._send(200, {"url": f"/out/{sid}-ai.png", "engine": "cloud/" + prof, "prompt": prompt_text})
                 wf = json.loads((ROOT.parent / "workflows" / "qwen21_turbo_edit_api.json").read_text())
                 wf["4"]["inputs"]["image"] = src.name
                 wf["6"]["inputs"]["prompt"] = prompt_text

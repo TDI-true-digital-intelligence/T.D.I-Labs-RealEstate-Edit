@@ -132,5 +132,16 @@ check("bug14 bad Host header -> 403", badhost == 403, str(badhost))
 r = post("/api/ai", {"image_b64": "data:image/png;base64,AAAA", "mode": "sky-blue"})
 check("bug15 /api/ai validates image before ComfyUI", "error" in r, str(r)[:100])
 
+
+# 15. cloud profiles exposed + honest error without credits
+r = urllib.request.urlopen("http://127.0.0.1:8189/api/presets", timeout=5)
+d = json.loads(r.read())
+check("bug16 cloud profiles in /api/presets", "glm-cloud" in d.get("cloud_profiles", {}))
+c = subprocess.run(["curl", "-s", "-m", "60", "-X", "POST", "http://127.0.0.1:8189/api/ai",
+                    "-H", "Content-Type: application/json",
+                    "-d", json.dumps({"image_b64": B64, "mode": "sky-blue", "engine": "cloud:glm-cloud"})],
+                   capture_output=True, text=True)
+check("bug17 cloud call returns honest engine error (auth/balance, not crash)", "error" in c.stdout, c.stdout[:100])
+
 print(f"\nFINAL: {len(PASS)} passed, {len(FAIL)} failed")
 sys.exit(1 if FAIL else 0)

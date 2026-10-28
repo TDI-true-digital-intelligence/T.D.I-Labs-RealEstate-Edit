@@ -58,6 +58,8 @@ select,input[type=text]{width:100%;background:#0d1322;border:1px solid var(--bor
   </div>
   <div class="card" style="flex:1;min-width:280px">
     <b style="font-size:13px">🤖 AI Edit (Qwen-Image 2.1 — sky / grass / declutter)</b>
+    <label>engine</label>
+    <select id="aiengine"><option value="auto">auto (local ComfyUI → cloud fallback)</option><option value="cloud:glm-cloud">GLM Cloud (needs REALESTATE_GLM_API_KEY)</option><option value="cloud:custom">Custom endpoint (env vars)</option></select>
     <label>mode</label>
     <select id="aimode"></select>
     <label>custom prompt (used when mode = custom)</label>

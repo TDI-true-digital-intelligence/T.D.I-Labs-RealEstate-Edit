@@ -69,3 +69,19 @@ MIT — © T.D.I Lab 2026. Qwen-Image weights follow their own research license 
 
 ## Legal
 MIT © 2026 Robert Shields Jr. McDougall. See LICENSE + AI-ASSISTANCE.md. Qwen-Image weights = separate Qwen research license. Not financial or real-estate advice.
+
+## Cloud engine profiles (GLM) — no local model needed
+
+The AI modes now run on **cloud profiles** — anyone with a GLM API key can connect:
+
+```
+export REALESTATE_GLM_API_KEY=sk-...   # Z.AI key with image-API credits
+# optional: REALESTATE_GLM_MODEL (default glm-image)
+```
+
+- Engine selector in the UI: **auto** (local ComfyUI if running → cloud fallback) or **GLM Cloud** directly.
+- Uses Z.AI `POST /v1/images/edits` (OpenAI-compatible) — GLM-Image does true image-to-image editing: your photo + "replace the sky with a clear blue sky" → edited photo. Same task class as local Qwen-Image 2.1; the prompt library is shared.
+- ~$0.015/image (Z.AI pricing).
+- **Custom endpoint profile** for WaveSpeed `z-ai/glm-image/edit`, self-hosted `sglang serve zai-org/GLM-Image` (:30000/v1/images/edits), or OpenAI gpt-image — set `REALESTATE_CUSTOM_BASE_URL` + `REALESTATE_CUSTOM_API_KEY` (+ `REALESTATE_CUSTOM_MODEL`).
+
+Errors are honest: no key → tells you the env var; no credits → passes the API message through.
