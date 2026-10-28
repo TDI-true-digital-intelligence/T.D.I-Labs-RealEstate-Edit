@@ -105,5 +105,13 @@ except Exception:
     ok = False
 check("bug10 presets responsive during AI job (ThreadingHTTPServer)", ok)
 
+
+# 10. gap-fix: comfyui systemd service enabled (survives reboot)
+c = subprocess.run(["systemctl", "--user", "is-enabled", "comfyui.service"], capture_output=True, text=True)
+check("bug11 comfyui.service enabled at boot", c.stdout.strip() == "enabled", c.stdout.strip())
+# 11. gap-fix: work dir bounded (<= 200 files after cleanup pass)
+n = len(list((ROOT / "webui/work").glob("*-*.png")))
+check("bug12 work dir bounded <= 200 files", n <= 200, f"{n} files")
+
 print(f"\nFINAL: {len(PASS)} passed, {len(FAIL)} failed")
 sys.exit(1 if FAIL else 0)

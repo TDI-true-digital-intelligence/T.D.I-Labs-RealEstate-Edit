@@ -30,6 +30,21 @@ AI_MODES = {
 for d in (WORK, UPLOADS, OUTPUTS):
     d.mkdir(parents=True, exist_ok=True)
 
+def _cleanup_work(max_age_s=3600 * 24, max_files=200):
+    """Keep the work dir bounded: delete files older than a day, cap total count (oldest first)."""
+    try:
+        files = sorted(WORK.glob("*-*.png"), key=lambda f: f.stat().st_mtime)
+        import time as _t
+        now = _t.time()
+        for f in files:
+            if now - f.stat().st_mtime > max_age_s:
+                f.unlink(missing_ok=True)
+        files = sorted(WORK.glob("*-*.png"), key=lambda f: f.stat().st_mtime)
+        while len(files) > max_files:
+            files.pop(0).unlink(missing_ok=True)
+    except Exception:
+        pass
+
 def comfy_post(path, payload):
     req = urllib.request.Request(COMFY + path, json.dumps(payload).encode(),
                                  {"Content-Type": "application/json"})
@@ -179,6 +194,7 @@ class H(BaseHTTPRequestHandler):
                 fname = imgs[0]["filename"]
                 out = WORK / f"{sid}-ai.png"
                 out.write_bytes((OUTPUTS / fname).read_bytes())
+                _cleanup_work()
                 self._send(200, {"url": f"/out/{sid}-ai.png", "engine": "qwen-image-2.1-turbo", "prompt": prompt_text})
             else:
                 self._send(404, {"error": "bad path"})
@@ -186,6 +202,7 @@ class H(BaseHTTPRequestHandler):
             self._send(500, {"error": str(e)})
 
 if __name__ == "__main__":
+    _cleanup_work()
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8189
     print(f"realestate-edit server on :{port}")
     ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
