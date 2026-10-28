@@ -32,11 +32,11 @@ jbuf = io.BytesIO(); img.save(jbuf, "JPEG")
 J64 = "data:image/jpeg;base64," + base64.b64encode(jbuf.getvalue()).decode()
 
 # 1. ComfyUI autogrow wiring bug (was: image_1 flat input -> TypeError 500)
-r = post("/api/ai", {"image_b64": B64, "mode": "sky-blue"})
+r = post("/api/ai", {"image_b64": B64, "mode": "sky-blue", "engine": "local"})
 check("bug1 comfy autogrow images dict + history poll (no list-index/TypeError)", "error" not in r or "unexpected keyword" not in str(r.get("error", "")), str(r)[:120])
 
-# 2. history-404 premature-finish bug (result must contain a url)
-check("bug2 finished prompt returns image url", "url" in r or "503" in str(r.get("_status", "")), str(r)[:120])
+# 2. history-404 premature-finish bug (finished prompt must serve image; local-engine-down = clean 503)
+check("bug2 AI result url or clean local-503", "url" in r or r.get("_status") == 503 or "503" in str(r.get("error", "")), str(r)[:120])
 
 # 3. JPEG input (was: PNG-only, 'Invalid PNG signature')
 r = post("/api/grade", {"image_b64": J64, "preset": "bright-airy"})
@@ -108,7 +108,7 @@ check("bug10 presets responsive during AI job (ThreadingHTTPServer)", ok)
 
 # 10. gap-fix: comfyui systemd service enabled (survives reboot)
 c = subprocess.run(["systemctl", "--user", "is-enabled", "comfyui.service"], capture_output=True, text=True)
-check("bug11 comfyui.service enabled at boot", c.stdout.strip() == "enabled", c.stdout.strip())
+check("bug11 comfyui.service removed/disabled (local model retired for cloud profile)", c.stdout.strip() == "disabled" or "not found" in c.stdout.strip() or c.returncode != 0, c.stdout.strip())
 # 11. gap-fix: work dir bounded (<= 200 files after cleanup pass)
 n = len(list((ROOT / "webui/work").glob("*-*.png")))
 check("bug12 work dir bounded <= 200 files", n <= 200, f"{n} files")
