@@ -1,0 +1,18 @@
+[package]
+name = "realestate-engine"
+version = "1.0.0"
+edition = "2021"
+description = "Real-estate photo color engine: sky tint, grass green, HDR punch, white balance — pure Rust, no personal data"
+
+[lib]
+name = "realestate_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "realestate-cli"
+path = "src/main.rs"
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+imageproc = "0.25"
+rusttype = "0.9"

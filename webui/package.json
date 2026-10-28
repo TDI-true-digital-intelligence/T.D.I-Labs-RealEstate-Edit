@@ -1,0 +1,8 @@
+{
+  "name": "realestate-edit-webui",
+  "main": "main.js",
+  "version": "1.0.0",
+  "description": "RealEstate Edit — AI sky, grass & color profiles for real estate photos. Rust engine + Qwen-Image 2.1 (ComfyUI).",
+  "license": "MIT",
+  "author": "T.D.I Lab"
+}
