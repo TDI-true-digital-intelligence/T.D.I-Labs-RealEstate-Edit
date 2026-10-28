@@ -198,6 +198,8 @@ class H(BaseHTTPRequestHandler):
                     out.write_bytes(fn(key, src.read_bytes(), prompt_text))
                     _cleanup_work()
                     return self._send(200, {"url": f"/out/{sid}-ai.png", "engine": "cloud/" + prof, "prompt": prompt_text})
+                if engine == "local" and not self._comfy_up():
+                    return self._send(503, {"error": "local ComfyUI engine not running (retired for cloud profile); use engine=auto or cloud:glm-cloud"})
                 wf = json.loads((ROOT.parent / "workflows" / "qwen21_turbo_edit_api.json").read_text())
                 wf["4"]["inputs"]["image"] = src.name
                 wf["6"]["inputs"]["prompt"] = prompt_text
